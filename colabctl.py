@@ -10,11 +10,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pickle
 import time
+import datetime
 import validators
-
+from icecream import ic
 from selenium_stealth import stealth
 import time
+ic.configureOutput(includeContext=True)
+def time_format():
+    return f'{datetime.datetime.now()}|> '
 
+ic.configureOutput(prefix=time_format)
 
 
 def sleep(seconds):
@@ -125,11 +130,11 @@ else:
     raise Exception('No notebooks')
 
 chrome_options = Options()
-chrome_options.add_argument('--headless') # uncomment for headless mode
+# chrome_options.add_argument('--headless') # uncomment for headless mode
 chrome_options.add_argument('--no-sandbox')
 #chrome_options.add_argument("user-data-dir=profile") # left for debugging
 chrome_options.add_argument('--disable-dev-shm-usage')
-
+chrome_options.add_argument("--enable-javascript")
 chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 chrome_options.add_experimental_option('useAutomationExtension', False)
 
@@ -144,14 +149,6 @@ except Exception:
 wd.get(colab_1)
 
 
-stealth(wd,
-        languages=["en-US", "en"],
-        vendor="Google Inc.",
-        platform="Win32",
-        webgl_vendor="Intel Inc.",
-        renderer="Intel Iris OpenGL Engine",
-        fix_hairline=True,
-        )
 
 if exists_by_text(wd, "Sign in"):
     print("No auth cookie detected. Please login to Google.")
@@ -175,31 +172,78 @@ while True:
         wd.get(colab_url)
         print("Logged in.") # for debugging
         running = False
-        wait_for_xpath(wd, '//*[@id="file-menu-button"]/div/div/div[1]')
+        wait_for_xpath(wd, '//*[@id="file-menu-button"]')
         print('Notebook loaded.')
         sleep(10)
-
-        while not exists_by_text(wd, "Sign in"):
+        
+        ic('before...')
+        i = 0
+        while True:
+            ic('...')
             if exists_by_text(wd, "Runtime disconnected"):
+                ic("runtime disconnected")
                 try:
                     wd.find_element_by_xpath('//*[@id="ok"]').click()
+                    pass
                 except NoSuchElementException:
                     pass
             if exists_by_text2(wd, "Notebook loading error"):
                 wd.get(colab_url)
+                ic("loading error")
             try:
+                ic()
+                time.sleep(20)
                 wd.find_element_by_xpath('//*[@id="file-menu-button"]/div/div/div[1]')
+                wd.find_element_by_xpath("//body").click()
                 if not running:
-                    wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.SHIFT + "q")
-                    wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.SHIFT + "k")
-                    exists_by_xpath(wd, '//*[@id="ok"]', 10)
-                    wd.find_element_by_xpath('//*[@id="ok"]').click()
+                    ic()
+                    
+                    actions = ActionChains(wd)
+                    actions.key_down(Keys.CONTROL)
+                    actions.key_down(Keys.SHIFT)
+                    actions.send_keys("q")
+
+                    actions.key_up(Keys.CONTROL)
+                    actions.key_up(Keys.SHIFT)
+                    actions.perform()
+
+                    # exists_by_xpath(wd, '//*[@id="ok"]', 10)
+                    # wd.find_element_by_xpath('//*[@id="ok"]').click()
+                    sleep(3)
+                    actions = ActionChains(wd)
+                    # actions.click(body)
+                    actions.key_down(Keys.CONTROL)
+                    actions.key_down(Keys.SHIFT)
+                    actions.send_keys("r")
+                    
+                    actions.key_up(Keys.CONTROL)
+                    actions.key_up(Keys.SHIFT)
+
+                    actions.perform()
+
                     sleep(10)
-                    wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.F9)
+                    element = wd.find_element_by_xpath("//body")
+                    element.send_keys(Keys.CONTROL,Keys.SHIFT, 'r')
+
+                   
+                    
+                    # wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.SHIFT + "Q")
+                    # wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.SHIFT + "R")
+                    ic()
+                    # exists_by_xpath(wd, '//*[@id="ok"]', 10)
+                    ic()
+                    # wd.find_element_by_xpath('//*[@id="ok"]').click()
+                    sleep(10)
+                    ic()
+                    # wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.F9)
                     running = True
-            except NoSuchElementException:
+                    ic('####RUNNING1')
+
+            except Exception as e:
+                ic(e)
                 pass
             if running:
+                ic('####RUNNING2')
                 try:
                     wd.find_element_by_css_selector('.notebook-content-background').click()
                     #actions = ActionChains(wd)
@@ -207,9 +251,15 @@ while True:
                     scroll_to_bottom(wd)
                     print("performed scroll")
                 except:
+                    ic("scroll performed error")
                     pass
-                for frame in wd.find_elements_by_tag_name('iframe'):
-                    wd.switch_to.frame(frame)
+                for frame in wd.find_elements_by_css_selector('.output_text'):
+                    ic('iframe')
+                    # actions = ActionChains(wd)
+                    # actions.move_to_element(frame)
+                    # actions.perform()
+
+                    # wd.switch_to.frame(frame)
                     '''
                     links = browser.find_elements_by_partial_link_text('oauth2/auth')
                     for link in links:
@@ -218,15 +268,30 @@ while True:
                         wd.find_element_by_css_selector('#submit_approve_access>content:nth-child(3)>span:nth-child(1)').click()
                         auth_code = wd.find_element_by_xpath('/html/body/div[1]/div[1]/div[2]/div[2]/div/div/div[2]/div/div/div/form/content/section/div/content/div/div/div/textarea').text
                     '''
-                    for output in wd.find_elements_by_tag_name('pre'):
-                        if fork in output.text:
+                    for output in wd.find_elements_by_css_selector('.output_text'):
+                        ic()
+                        ic(output.text)
+                        if fork.strip() in output.text.strip():
+                            
+                            
                             running = False
                             complete = True
                             print("Completion string found. Waiting for next cycle.")
                             break
+                    
+                        time.sleep(10)
+                    time.sleep(10)
+                    
                     wd.switch_to.default_content()
                     if complete:
                         break
                 if complete:
+                    
+                    ic('complete')
                     break
+            
+            if i > 10:
+                break
+            i += 1        
+
     sleep(timeout)
