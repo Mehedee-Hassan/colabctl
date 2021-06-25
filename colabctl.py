@@ -12,6 +12,10 @@ import pickle
 import time
 import validators
 
+from selenium_stealth import stealth
+import time
+
+
 
 def sleep(seconds):
     for i in range(seconds):
@@ -125,6 +129,10 @@ chrome_options.add_argument('--headless') # uncomment for headless mode
 chrome_options.add_argument('--no-sandbox')
 #chrome_options.add_argument("user-data-dir=profile") # left for debugging
 chrome_options.add_argument('--disable-dev-shm-usage')
+
+chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+chrome_options.add_experimental_option('useAutomationExtension', False)
+
 wd = webdriver.Chrome('chromedriver', options=chrome_options)
 
 wd.get(colab_1)
@@ -134,6 +142,16 @@ try:
 except Exception:
     pass
 wd.get(colab_1)
+
+
+stealth(wd,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="Win32",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+        )
 
 if exists_by_text(wd, "Sign in"):
     print("No auth cookie detected. Please login to Google.")
